@@ -486,9 +486,6 @@ Backbone.Validation = (function(_){
       // Validates if the attribute is required or not
       required: function(value, attr, required, model, computed) {
         var isRequired = _.isFunction(required) ? required.call(model, value, attr, computed) : required;
-        if(!isRequired && !hasValue(value)) {
-          return false; // overrides all other validators
-        }
         if (isRequired && !hasValue(value)) {
           return this.format(defaultMessages.required, this.formatLabel(attr, model));
         }
@@ -534,7 +531,7 @@ Backbone.Validation = (function(_){
       // Validates that the value has to be a string with length equal to
       // the length value specified
       length: function(value, attr, length, model) {
-        if (!hasValue(value) || trim(value).length !== length) {
+        if (hasValue(value) && trim(value).length !== length) {
           return this.format(defaultMessages.length, this.formatLabel(attr, model), length);
         }
       },
@@ -543,7 +540,7 @@ Backbone.Validation = (function(_){
       // Validates that the value has to be a string with length equal to or greater than
       // the min length value specified
       minLength: function(value, attr, minLength, model) {
-        if (!hasValue(value) || trim(value).length < minLength) {
+        if (hasValue(value) && trim(value).length < minLength) {
           return this.format(defaultMessages.minLength, this.formatLabel(attr, model), minLength);
         }
       },
@@ -552,7 +549,7 @@ Backbone.Validation = (function(_){
       // Validates that the value has to be a string with length equal to or less than
       // the max length value specified
       maxLength: function(value, attr, maxLength, model) {
-        if (!hasValue(value) || trim(value).length > maxLength) {
+        if (hasValue(value) && trim(value).length > maxLength) {
           return this.format(defaultMessages.maxLength, this.formatLabel(attr, model), maxLength);
         }
       },
@@ -561,7 +558,7 @@ Backbone.Validation = (function(_){
       // Validates that the value has to be a string and equal to or between
       // the two numbers specified
       rangeLength: function(value, attr, range, model) {
-        if(!hasValue(value) || trim(value).length < range[0] || trim(value).length > range[1]) {
+        if(hasValue(value) && trim(value).length < range[0] || trim(value).length > range[1]) {
           return this.format(defaultMessages.rangeLength, this.formatLabel(attr, model), range[0], range[1]);
         }
       },
@@ -588,7 +585,7 @@ Backbone.Validation = (function(_){
       // Validates that the value has to match the pattern specified.
       // Can be a regular expression or the name of one of the built in patterns
       pattern: function(value, attr, pattern, model) {
-        if (!hasValue(value) || !value.toString().match(defaultPatterns[pattern] || pattern)) {
+        if (hasValue(value) && !value.toString().match(defaultPatterns[pattern] || pattern)) {
           return this.format(defaultMessages.pattern, this.formatLabel(attr, model), pattern);
         }
       }
