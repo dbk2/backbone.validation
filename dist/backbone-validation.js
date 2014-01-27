@@ -1,6 +1,6 @@
 // Backbone.Validation v0.8.1
 //
-// Copyright (c) 2011-2013 Thomas Pedersen
+// Copyright (c) 2011-2014 Thomas Pedersen
 // Distributed under MIT License
 //
 // Documentation and full license available at:
@@ -139,6 +139,11 @@ Backbone.Validation = (function(_){
       // applying all the validators and returning the first error
       // message, if any.
       return _.reduce(getValidators(model, attr), function(memo, validator){
+        // skip rest validators after first error
+        if (memo) {
+          return memo;
+        }
+
         // Pass the format functions plus the default
         // validators as the context to the validator
         var ctx = _.extend({}, formatFunctions, defaultValidators),
