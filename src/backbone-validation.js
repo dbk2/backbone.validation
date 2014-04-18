@@ -75,6 +75,12 @@ Backbone.Validation = (function(_){
     return into;
   };
 
+  var oneStepPromiseStub = {
+    then: function(done) {
+      return done();
+    }
+  };
+
   // Validation
   // ----------
 
@@ -127,7 +133,11 @@ Backbone.Validation = (function(_){
     // for that attribute. If one or more errors are found,
     // the first error message is returned.
     // If the attribute is valid, an empty string is returned.
-    var validateAttr = function(model, attr, value, computed) {
+    var validateAttr = function(model, attr, value, computed, asyncPromise) {
+      var asyncSupport = {
+        asyncPromise: asyncPromise ? asyncPromise : oneStepPromiseStub
+      };
+
       // Reduces the array of validators to an error message by
       // applying all the validators and returning the first error
       // message, if any.
@@ -139,7 +149,7 @@ Backbone.Validation = (function(_){
 
         // Pass the format functions plus the default
         // validators as the context to the validator
-        var ctx = _.extend({}, formatFunctions, defaultValidators),
+        var ctx = _.extend({}, formatFunctions, defaultValidators, asyncSupport),
             result = validator.fn.call(ctx, value, attr, validator.val, model, computed);
 
         if(result === false || memo === false) {
@@ -155,7 +165,7 @@ Backbone.Validation = (function(_){
     // Loops through the model's attributes and validates them all.
     // Returns and object containing names of invalid attributes
     // as well as error messages.
-    var validateModel = function(model, attrs) {
+    var validateModel = function(model, attrs, asyncPromise) {
       var error,
           invalidAttrs = {},
           isValid = true,
@@ -163,7 +173,7 @@ Backbone.Validation = (function(_){
           flattened = flatten(attrs);
 
       _.each(flattened, function(val, attr) {
-        error = validateAttr(model, attr, val, computed);
+        error = validateAttr(model, attr, val, computed, asyncPromise);
         if (error) {
           invalidAttrs[attr] = error;
           isValid = false;
@@ -189,7 +199,7 @@ Backbone.Validation = (function(_){
         // Check to see if an attribute, an array of attributes or the
         // entire model is valid. Passing true will force a validation
         // of the model.
-        isValid: function(option) {
+        isValid: function(option, options) {
           var flattened = flatten(this.attributes);
 
           if(_.isString(option)){
@@ -201,7 +211,7 @@ Backbone.Validation = (function(_){
             }, true, this);
           }
           if(option === true) {
-            this.validate();
+            this.validate(null, options);
           }
           return this.validation ? this._isValid : true;
         },
@@ -217,7 +227,7 @@ Backbone.Validation = (function(_){
               allAttrs = _.extend({}, validatedAttrs, model.attributes, attrs),
               changedAttrs = flatten(attrs || allAttrs),
 
-              result = validateModel(model, allAttrs);
+              result = validateModel(model, allAttrs, opt.asyncPromise);
 
           model._isValid = result.isValid;
 
@@ -593,6 +603,28 @@ Backbone.Validation = (function(_){
         if (hasValue(value) && !value.toString().match(defaultPatterns[pattern] || pattern)) {
           return this.format(defaultMessages.pattern, this.formatLabel(attr, model), pattern);
         }
+      },
+
+      async: function(value, attr, checker, model) {
+        if (!_.isUndefined(model.asyncError)) {
+          return model.asyncError;
+        }
+
+        if (!value) {
+          return;
+        }
+
+        checker(value, this.asyncPromise).then(function(error) {
+          var attrs = {};
+
+          model.asyncError = error;
+          try {
+            attrs[attr] = value;
+            model.validate(attrs);
+          } finally {
+            delete model.asyncError;
+          }
+        });
       }
     };
   }());
